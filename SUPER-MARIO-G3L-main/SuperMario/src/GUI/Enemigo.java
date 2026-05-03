@@ -1,0 +1,185 @@
+package GUI;
+
+import java.awt.Graphics;
+import javax.swing.ImageIcon;
+import javax.swing.JPanel;
+import javax.swing.Timer;
+
+public class Enemigo extends JPanel {
+
+    private static final long serialVersionUID = 1L;
+
+    private boolean hacia_derecha = true;
+	boolean haciaArriba = true;
+    private Timer movimiento;
+    private Timer disparoTimer;
+
+    public int limiteIzquierdo;
+    public int limiteDerecho;
+    public int desplazamiento = 0;
+    public ImageIcon icon;
+    public int vida;
+    private NivelBase nivel;
+    
+    public String tipo; //mate o carbon
+
+    private boolean dispara; // true si es Matecinini o similar
+    
+    private boolean fijoEnPantalla;
+
+
+    public void ajustarLimites(int desplazamiento) {
+        limiteIzquierdo += desplazamiento;
+        limiteDerecho += desplazamiento;
+    }
+
+    public Enemigo(int posX, int posY, int ancho, int alto, int limiteIzquierdo, int limiteDerecho, ImageIcon icon, NivelBase nivel, boolean fijoEnPantalla) {
+        this(posX, posY, ancho, alto, limiteIzquierdo, limiteDerecho, icon, false, 1, nivel, false);
+    }
+
+    public Enemigo(int posX, int posY, int ancho, int alto, int limiteIzquierdo, int limiteDerecho, ImageIcon icon, boolean dispara, int vida, NivelBase nivel, boolean fijoEnPantalla) {
+        setBounds(posX, posY, ancho, alto);
+        this.icon = icon;
+        this.limiteDerecho = limiteDerecho;
+        this.limiteIzquierdo = limiteIzquierdo;
+        this.dispara = dispara;
+        this.vida = vida;
+        this.nivel = nivel;
+        this.fijoEnPantalla = fijoEnPantalla;
+        this.tipo = tipo; 
+        setOpaque(false);
+    }
+    
+    public boolean isFijoEnPantalla() {
+        return fijoEnPantalla;
+    }
+
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        if (icon != null) {
+            if (hacia_derecha) {
+                // normal (mirando a la izquierda)
+            	g.drawImage(icon.getImage(), 0, 0, getWidth(), getHeight(),
+                        icon.getIconWidth(), 0, 0, icon.getIconHeight(), this);
+            	
+            } else {
+                // espejado horizontal (mirando a la derecha)
+            	g.drawImage(icon.getImage(), 0, 0, getWidth(), getHeight(),
+                        0, 0, icon.getIconWidth(), icon.getIconHeight(), this);
+            }
+        }
+    }
+
+ 
+    public void patrullar() {
+        if (dispara) return; // si dispara, no se mueve
+        movimiento = new Timer(30, e -> {
+            if (hacia_derecha) {
+                if (getX() + getWidth() <= limiteDerecho) {
+                    setLocation(getX() + 3, getY());
+                } else {
+                    hacia_derecha = false;
+                }
+            } else {
+                if (getX() > limiteIzquierdo) {
+                    setLocation(getX() - 3, getY());
+                } else {
+                    hacia_derecha = true;
+                }
+            }
+        });
+        movimiento.start();
+    }
+
+    public void detenerPatrulla() {
+        if (movimiento != null) movimiento.stop();
+        if (disparoTimer != null) disparoTimer.stop();
+    }
+
+    
+    public void empezarADisparar(Player jugador) { // Para enemigos que van a disparar
+        if (!dispara) return;
+        disparoTimer = new Timer(2000, e -> disparar(jugador));
+        disparoTimer.start();
+    }
+
+    private void disparar(Player jugador) {
+        hacia_derecha = (jugador.getX() > getX());   
+
+        int dx = hacia_derecha ? 5 : -5;
+
+        ImageIcon iconBala = null;
+        if ("jefe".equals(tipo) && nivel.getNumeroNivel() == 2) {
+            iconBala = new ImageIcon(getClass().getResource("/img/personajes/enemigos/yaEscalados/yerbaMate.png"));
+        } else if ("jefe".equals(tipo) && nivel.getNumeroNivel() == 3) {
+            iconBala = new ImageIcon(getClass().getResource("/img/personajes/enemigos/yaEscalados/pelotaMaradona.png"));
+        }
+
+        Bala bala = new Bala(getX() + getWidth() / 2, getY() + getHeight() / 2, dx, iconBala);
+
+        if (getParent() != null) {
+            getParent().add(bala);
+            getParent().setComponentZOrder(bala, 0);
+        }
+        nivel.agregarBala(bala);
+    }
+    
+    public void movimientoJefe(Player player) {
+    		movimiento = new Timer(75, e -> {
+                	if (player.getX() < getX() && getX() > limiteIzquierdo) {
+                        setLocation(getX() - 5, getY());
+                    } else if (player.getX() > getX() && getX() + getWidth() <= limiteDerecho){
+                    	setLocation(getX() + 3, getY());
+                    }
+                
+            });
+            movimiento.start();
+    	
+    }
+    
+    public boolean restarVida(int cantidad) {
+        vida -= cantidad;
+        return vida <= 0;
+    }
+    
+    public void movimientoVerical(int dy) {
+
+    	movimiento = new Timer(75, e -> {
+        	if (haciaArriba) {
+                setLocation(getX(), getY() - dy);
+            } 
+        	if (getY() <= 100) {
+        		haciaArriba = false;
+        	}
+        	if (!haciaArriba){
+            	setLocation(getX(), getY() + dy);
+            }
+        	if (getY() + getHeight() >= 450) {
+        		haciaArriba = true;
+        	}
+        
+    });
+    movimiento.start();
+    }
+    
+    public void movimientoJefe2(Player player) {
+    	movimiento = new Timer(75, e -> {
+        	if (haciaArriba) {
+                setLocation(getX(), getY() - 3);
+            } 
+        	if (getY() <= player.getY()) {
+        		haciaArriba = false;
+        	}
+        	if (!haciaArriba){
+            	setLocation(getX(), getY() + 3);
+            }
+        	if (getY() >= player.getY()) {
+        		haciaArriba = true;
+        	}
+        
+    });
+    movimiento.start();
+    }
+}
